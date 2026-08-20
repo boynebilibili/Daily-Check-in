@@ -159,6 +159,29 @@ function bindEvents() {
   // 点击主体打卡；右键减一次（不限次数 / 目标项）
   const mainEl = document.getElementById('main');
   mainEl.addEventListener('click', () => {
+    // 打卡动画反馈：卡片弹起回弹 + 数字/大字变绿跳动
+    const card = document.getElementById('card');
+    const countEl = document.getElementById('count');
+    const bigEl = document.getElementById('big');
+    const clearAnim = () => {
+      card.classList.remove('check-anim');
+      if (countEl) countEl.classList.remove('check-bump');
+      if (bigEl) bigEl.classList.remove('check-bump');
+    };
+    card.classList.remove('check-anim');
+    void card.offsetWidth;  // 强制重排，确保动画可重复触发
+    card.classList.add('check-anim');
+    const bumpTarget = countEl || bigEl;
+    if (bumpTarget) {
+      bumpTarget.classList.remove('check-bump');
+      void bumpTarget.offsetWidth;
+      bumpTarget.classList.add('check-bump');
+    }
+    // 动画播完即清理（比 setTimeout 可靠，隐藏窗口时定时器会被节流）
+    card.addEventListener('animationend', clearAnim, { once: true });
+    if (bumpTarget) bumpTarget.addEventListener('animationend', clearAnim, { once: true });
+    // 兜底：若动画未播放（窗口隐藏）也清理
+    setTimeout(clearAnim, 800);
     window.api.toggleCheckin(ITEM_ID);
   });
   mainEl.addEventListener('contextmenu', (e) => {
@@ -166,21 +189,24 @@ function bindEvents() {
     // 减打卡动画反馈：卡片下沉回弹 + 数字变红跳动
     const card = document.getElementById('card');
     const countEl = document.getElementById('count');
+    const bigEl = document.getElementById('big');
     const clearAnim = () => {
       card.classList.remove('minus-anim');
       if (countEl) countEl.classList.remove('bump');
+      if (bigEl) bigEl.classList.remove('bump');
     };
     card.classList.remove('minus-anim');
     void card.offsetWidth;  // 强制重排，确保动画可重复触发
     card.classList.add('minus-anim');
-    if (countEl) {
-      countEl.classList.remove('bump');
-      void countEl.offsetWidth;
-      countEl.classList.add('bump');
+    const bumpTarget = countEl || bigEl;
+    if (bumpTarget) {
+      bumpTarget.classList.remove('bump');
+      void bumpTarget.offsetWidth;
+      bumpTarget.classList.add('bump');
     }
     // 动画播完即清理（比 setTimeout 可靠，隐藏窗口时定时器会被节流）
     card.addEventListener('animationend', clearAnim, { once: true });
-    if (countEl) countEl.addEventListener('animationend', clearAnim, { once: true });
+    if (bumpTarget) bumpTarget.addEventListener('animationend', clearAnim, { once: true });
     // 兜底：若动画未播放（窗口隐藏）也清理
     setTimeout(clearAnim, 800);
     window.api.minusCheckin(ITEM_ID);
