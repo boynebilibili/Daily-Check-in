@@ -309,6 +309,7 @@ function createConfigWindow() {
   if (configWin && !configWin.isDestroyed()) {
     configWin.show();
     configWin.focus();
+    applyVisibility();  // 配置窗口重新可见 → 强制显示卡片
     return;
   }
   configWin = new BrowserWindow({
@@ -327,7 +328,12 @@ function createConfigWindow() {
   });
   configWin.loadFile(path.join(__dirname, 'config', 'index.html'));
   attachRendererCrashGuard(configWin);
-  configWin.on('closed', () => { configWin = null; });
+  configWin.on('closed', () => {
+    configWin = null;
+    applyVisibility();  // 配置窗口关闭后恢复全屏隐藏逻辑
+  });
+  // 窗口默认 show:true，创建即显示；直接评估可见性（不依赖可能错过的 show 事件）
+  applyVisibility();
 }
 
 /* ---------------- 托盘 ---------------- */
@@ -356,12 +362,18 @@ function createTrayIcon() {
 
 /* ---------------- 可见性管理 ---------------- */
 
+// 配置窗口打开时，说明用户正在主动使用 → 强制显示卡片（全屏隐藏让位）
+function isConfigActive() {
+  return configWin && !configWin.isDestroyed() && configWin.isVisible();
+}
+
 // 根据全屏状态、托盘手动隐藏、目标完成自动隐藏，统一控制卡片显示
 function applyVisibility() {
+  const configActive = isConfigActive();
   for (const [id, win] of itemWins) {
     if (win.isDestroyed()) continue;
     const autoHide = autoHiddenIds.has(id);
-    const show = !fgFullscreen && !trayHidden && !autoHide;
+    const show = (!fgFullscreen || configActive) && !trayHidden && !autoHide;
     if (show && !win.isVisible()) win.show();
     else if (!show && win.isVisible()) win.hide();
   }
