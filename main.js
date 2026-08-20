@@ -492,19 +492,23 @@ function startForegroundMonitor() {
 }
 
 function handleForegroundLine(line) {
-  const [rectPart, clsPart, titlePart, procPart] = line.split('|');
-  const parts = (rectPart || '').split(',').map((s) => parseInt(s, 10));
-  if (parts.length !== 4 || parts.some(isNaN)) return;
-  const [l, t, r, b] = parts;
-  const wa = screen.getPrimaryDisplay().workArea;
-  const coversFull = l <= wa.x && t <= wa.y && r >= wa.x + wa.width && b >= wa.y + wa.height;
-  let fullscreen = coversFull;
-  if (coversFull) {
-    // 覆盖全屏但属于桌面/壁纸/常驻工具 → 不视为全屏应用
-    const cls = (clsPart || '').trim();
-    const proc = (procPart || '').trim().toLowerCase();
-    const isTool = FG_SKIP_CLASSES.has(cls) || FG_SKIP_PROCESSES.has(proc);
-    fullscreen = !isTool;
+  // 格式：N|class;proc|class;proc|...（N 为覆盖全屏的窗口数，0 表示没有）
+  const segs = line.split('|');
+  const n = parseInt(segs[0], 10);
+  if (isNaN(n) || n < 0) return;
+  let fullscreen = false;
+  if (n > 0) {
+    // 只要存在任意一个覆盖全屏且不属于常驻工具的窗口 → 视为全屏
+    for (let i = 1; i <= n && i < segs.length; i++) {
+      const [clsPart, procPart] = (segs[i] || '').split(';');
+      const cls = (clsPart || '').trim();
+      const proc = (procPart || '').trim().toLowerCase();
+      const isTool = FG_SKIP_CLASSES.has(cls) || FG_SKIP_PROCESSES.has(proc);
+      if (!isTool) {
+        fullscreen = true;
+        break;
+      }
+    }
   }
   if (fullscreen !== fgFullscreen) {
     fgFullscreen = fullscreen;

@@ -37,7 +37,11 @@ Three check-in modes are supported:
 
 ## Demo
 
-![Demo](docs/checkin-demo.gif)
+### Click and Move
+
+Click the card body to check in; drag the top bar of a card to move it.
+
+![Click and Move demo](docs/demo-click-and-move.gif)
 
 ## Features
 

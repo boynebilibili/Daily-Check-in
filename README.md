@@ -37,7 +37,11 @@ npm start
 
 ## 功能演示
 
-![功能演示动图](docs/checkin-demo.gif)
+### 点击与移动（Click and Move）
+
+点击卡片主体即可打卡，拖动卡片顶部条可移动位置。
+
+![点击与移动演示](docs/demo-click-and-move.gif)
 
 ## 项目特点
 
