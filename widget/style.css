@@ -206,23 +206,22 @@ body.dark .track {
   }
 }
 
-/* ---------- 减打卡动画：下沉回弹 + 数字跳动 ---------- */
+/* ---------- 减打卡动画：轻微下沉回弹 + 数字跳动 ---------- */
 .card.minus-anim {
-  animation: minusPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: minusPop 0.3s ease;
 }
 @keyframes minusPop {
   0% { transform: scale(1); }
-  35% { transform: scale(0.94) translateY(2px); }
-  70% { transform: scale(1.03); }
+  40% { transform: scale(0.98) translateY(1px); }
   100% { transform: scale(1); }
 }
 .count.bump {
-  animation: countBump 0.4s ease;
+  animation: countBump 0.3s ease;
   color: #e05555 !important;
 }
 @keyframes countBump {
   0% { transform: scale(1); }
-  40% { transform: scale(1.45); }
+  50% { transform: scale(1.18); }
   100% { transform: scale(1); }
 }
 
