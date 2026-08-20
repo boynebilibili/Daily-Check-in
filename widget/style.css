@@ -100,7 +100,8 @@ body.dark .gear {
   padding: 6px 16px;
   transition: transform 0.12s ease;
 }
-.main:active { transform: scale(0.96); }
+/* 点击反馈缩放由 JS 控制（仅左键），避免右键减打卡时误触发 */
+.main.pressing { transform: scale(0.96); }
 
 .big {
   font-size: var(--big-size, 52px);
@@ -203,6 +204,26 @@ body.dark .track {
     transform: scale(0.82) translateY(-34px);
     filter: blur(10px);
   }
+}
+
+/* ---------- 减打卡动画：下沉回弹 + 数字跳动 ---------- */
+.card.minus-anim {
+  animation: minusPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes minusPop {
+  0% { transform: scale(1); }
+  35% { transform: scale(0.94) translateY(2px); }
+  70% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+.count.bump {
+  animation: countBump 0.4s ease;
+  color: #e05555 !important;
+}
+@keyframes countBump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.45); }
+  100% { transform: scale(1); }
 }
 
 /* ---------- 字体档位（大字） ---------- */

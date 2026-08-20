@@ -44,6 +44,7 @@ function isDarkTheme(hex) {
 
 // 完成自动隐藏：防止重复触发动画
 let hideAnimStarted = false;
+let hideNotified = false;  // 是否已通知主进程隐藏（避免隐藏后重复播放动画）
 
 function render() {
   const item = (state && state.items || []).find((i) => i.id === ITEM_ID);
@@ -107,23 +108,45 @@ function render() {
 // - 目标次数：完成目标即隐藏（内置）
 // - 每天一次 / 不限次数：需开启 autoHide 且满足触发条件
 function maybeAutoHide(item, reached) {
+  const card = document.getElementById('card');
   const enabled = item.type === 'goal' || item.autoHide;
   if (!enabled || !reached) {
-    hideAnimStarted = false;
+    // 条件不再满足（如右键减打卡、跨天重置）→ 取消动画并完整恢复卡片
+    if (hideAnimStarted || card.classList.contains('hide-anim')) {
+      resetHideAnim(card);
+    }
+    hideNotified = false;
     return;
   }
+  // 已通知隐藏过（窗口已隐藏），无需重复播放
+  if (hideNotified) return;
   if (hideAnimStarted) return;
   hideAnimStarted = true;
-  const card = document.getElementById('card');
   card.classList.add('hide-anim');
   const notify = () => {
-    if (hideAnimStarted) window.api.cardAutoHidden(ITEM_ID);
-    hideAnimStarted = false;
+    if (hideAnimStarted) {
+      hideNotified = true;
+      window.api.cardAutoHidden(ITEM_ID);
+    }
+    resetHideAnim(card);
   };
   // animationend 正常路径
   card.addEventListener('animationend', notify, { once: true });
   // 兜底：窗口不可见时 CSS 动画可能被暂停，animationend 不触发 → 超时后仍通知隐藏
   setTimeout(notify, 1600);
+}
+
+// 彻底清除消失动画状态（类 + 内联样式 + 强制重排），避免卡片卡在"消失中间态"
+function resetHideAnim(card) {
+  hideAnimStarted = false;
+  card.classList.remove('hide-anim');
+  card.style.animation = 'none';
+  card.style.opacity = '';
+  card.style.transform = '';
+  card.style.filter = '';
+  card.style.pointerEvents = '';
+  // 强制重排：清除 animation 残留，让下次添加 hide-anim 时动画能重新播放
+  void card.offsetWidth;
 }
 
 /* ---------- 事件 ---------- */
@@ -134,12 +157,43 @@ function bindEvents() {
   });
 
   // 点击主体打卡；右键减一次（不限次数 / 目标项）
-  document.getElementById('main').addEventListener('click', () => {
+  const mainEl = document.getElementById('main');
+  mainEl.addEventListener('click', () => {
     window.api.toggleCheckin(ITEM_ID);
   });
-  document.getElementById('main').addEventListener('contextmenu', (e) => {
+  mainEl.addEventListener('contextmenu', (e) => {
     e.preventDefault();
+    // 减打卡动画反馈：卡片下沉回弹 + 数字变红跳动
+    const card = document.getElementById('card');
+    const countEl = document.getElementById('count');
+    const clearAnim = () => {
+      card.classList.remove('minus-anim');
+      if (countEl) countEl.classList.remove('bump');
+    };
+    card.classList.remove('minus-anim');
+    void card.offsetWidth;  // 强制重排，确保动画可重复触发
+    card.classList.add('minus-anim');
+    if (countEl) {
+      countEl.classList.remove('bump');
+      void countEl.offsetWidth;
+      countEl.classList.add('bump');
+    }
+    // 动画播完即清理（比 setTimeout 可靠，隐藏窗口时定时器会被节流）
+    card.addEventListener('animationend', clearAnim, { once: true });
+    if (countEl) countEl.addEventListener('animationend', clearAnim, { once: true });
+    // 兜底：若动画未播放（窗口隐藏）也清理
+    setTimeout(clearAnim, 800);
     window.api.minusCheckin(ITEM_ID);
+  });
+
+  // 左键按压反馈（仅 button 0，右键不触发，避免减打卡时出现奇怪缩放）
+  mainEl.addEventListener('mousedown', (e) => {
+    if (e.button === 0) mainEl.classList.add('pressing');
+  });
+  ['mouseup', 'mouseleave'].forEach((evt) => {
+    mainEl.addEventListener(evt, (e) => {
+      if (e.button === 0 || evt === 'mouseleave') mainEl.classList.remove('pressing');
+    });
   });
 
   // 右下角圆点手柄拖拽缩放
