@@ -1,0 +1,211 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  /* 与 VS Code 一致的字体：英文/数字 Monaspace Argon，中文钉钉进步体 */
+  font-family: "Monaspace Argon Var", "Monaspace Argon Var ExtraBold",
+               "DingTalk JinBuTi", "钉钉进步体",
+               "Maple Mono NF CN", "Maple Mono NF CN ExtraBold",
+               Consolas, "Courier New", monospace;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* 卡片填满整个窗口 —— 配合主进程 setShape 圆角裁剪 */
+.card {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px;
+  overflow: hidden;
+  /* GPU 抗锯齿圆角裁剪：视觉边缘由 clip-path 提供（平滑），
+     setShape 的系统形状只负责鼠标穿透与兜底 */
+  clip-path: inset(0 round 20px);
+  -webkit-clip-path: inset(0 round 20px);
+  /* 有底色的半透明：不透明度提高，保证阅读性 */
+  background: var(--theme, rgba(232, 238, 250, 0.88));
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    inset 0 -28px 34px rgba(255, 255, 255, 0.14);
+}
+
+/* 深色主题（暗夜卡片） */
+body.dark .card {
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -28px 34px rgba(0, 0, 0, 0.25);
+}
+body.dark .count,
+body.dark .track { color: rgba(255, 255, 255, 0.85); }
+
+/* ---------- 顶部条：色点 + 配置，均悬停显现 ---------- */
+.bar {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px 0;
+  -webkit-app-region: drag;
+  cursor: grab;
+}
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--accent, #7c9cf5);
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.15s ease;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #7c9cf5) 18%, transparent);
+}
+.card:hover .dot { opacity: 1; }
+.gear {
+  -webkit-app-region: no-drag;
+  margin-left: auto;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(120, 140, 200, 0.25);
+  border-radius: 8px;
+  width: 24px;
+  height: 24px;
+  font-size: 13px;
+  color: #4a5578;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.12s ease, background 0.12s ease;
+}
+.card:hover .gear { opacity: 0.8; }
+.gear:hover { background: rgba(255, 255, 255, 0.95); transform: scale(1.08); opacity: 1 !important; }
+body.dark .gear {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #dfe4f5;
+}
+
+/* ---------- 主体：大字 ---------- */
+.main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+  padding: 6px 16px;
+  transition: transform 0.12s ease;
+}
+.main:active { transform: scale(0.96); }
+
+.big {
+  font-size: var(--big-size, 52px);
+  font-weight: 800;
+  color: #232b47;
+  letter-spacing: 2px;
+  line-height: 1.05;
+  text-align: center;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.dark .big { color: #f4f6ff; }
+
+/* 完成态：文字变绿 */
+.big.done {
+  color: #2bb97e;
+}
+body.dark .big.done { color: #5ce6a8; }
+
+/* ---------- 进度条区域（目标项） ---------- */
+.progress-area {
+  padding: 2px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.track {
+  height: 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent, #7c9cf5) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent, #7c9cf5) 26%, transparent);
+  overflow: hidden;
+}
+body.dark .track {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+.fill {
+  height: 100%;
+  border-radius: 5px;
+  background: linear-gradient(90deg, var(--accent, #7c9cf5), color-mix(in srgb, var(--accent, #7c9cf5) 55%, white));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent, #7c9cf5) 45%, transparent);
+  transition: width 0.3s ease;
+}
+.count {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent, #7c9cf5);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+}
+
+/* ---------- 缩放手柄：圆点，悬停显现 ---------- */
+.resize {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: rgba(90, 100, 133, 0.4);
+  cursor: nwse-resize;
+  -webkit-app-region: no-drag;
+  opacity: 0;
+  transition: opacity 0.18s ease, background 0.15s ease, transform 0.15s ease;
+}
+.card:hover .resize { opacity: 1; }
+.resize:hover {
+  background: var(--accent, #7c9cf5);
+  transform: scale(1.25);
+}
+
+/* ---------- 完成自动隐藏：消失动画 ----------
+   三段式：轻微放大“确认” → 缩小上浮 + 淡出 + 模糊 */
+.card.hide-anim {
+  animation: hideAway 0.9s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+}
+@keyframes hideAway {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0px);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(1.06) translateY(0);
+    filter: blur(0px);
+  }
+  38% {
+    opacity: 0.95;
+    transform: scale(1.04) translateY(-4px);
+    filter: blur(1px);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.82) translateY(-34px);
+    filter: blur(10px);
+  }
+}
+
+/* ---------- 字体档位（大字） ---------- */
+body[data-font="small"] { --big-size: clamp(28px, 16vw, 44px); }
+body[data-font="medium"] { --big-size: clamp(38px, 21vw, 64px); }
+body[data-font="large"] { --big-size: clamp(52px, 28vw, 92px); }

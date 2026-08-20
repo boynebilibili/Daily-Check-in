@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <title>打卡配置</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <h1>打卡配置</h1>
+      <p class="subtitle">自定义打卡项与桌面卡片，改动实时同步</p>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="items">打卡项</button>
+      <button class="tab" data-tab="layout">布局</button>
+    </nav>
+
+    <!-- ============ 打卡项标签页 ============ -->
+    <section class="panel" id="panel-items">
+      <button class="add-btn" id="addBtn">＋ 添加打卡项</button>
+
+      <!-- 表单（添加/编辑共用） -->
+      <div class="form-wrap hidden" id="formWrap">
+        <div class="form">
+          <h2 id="formTitle">添加打卡项</h2>
+
+          <label class="field">
+            <span>名称</span>
+            <input type="text" id="name" placeholder="例如：喝水 / 背单词" />
+          </label>
+
+          <label class="field">
+            <span>打卡方式</span>
+            <div class="type-row">
+              <label class="type-option">
+                <input type="radio" name="type" value="daily" checked />
+                <span class="type-card">
+                  <b>每天一次</b>
+                  <small>完成即打勾，可取消</small>
+                </span>
+              </label>
+              <label class="type-option">
+                <input type="radio" name="type" value="counter" />
+                <span class="type-card">
+                  <b>不限次数</b>
+                  <small>自由打卡，只记次数</small>
+                </span>
+              </label>
+              <label class="type-option">
+                <input type="radio" name="type" value="goal" />
+                <span class="type-card">
+                  <b>目标次数</b>
+                  <small>设目标，看进度</small>
+                </span>
+              </label>
+            </div>
+          </label>
+
+          <!-- 目标项专属 -->
+          <div class="goal-fields hidden" id="goalFields">
+            <label class="field">
+              <span>目标次数</span>
+              <input type="number" id="target" min="1" value="8" />
+            </label>
+            <label class="field">
+              <span>统计周期</span>
+              <select id="period">
+                <option value="day">每天</option>
+                <option value="week">每周</option>
+                <option value="month">每月</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="field">
+            <span>强调色</span>
+            <div class="colors" id="colors">
+              <button type="button" class="swatch" style="background:#7c9cf5" data-color="#7c9cf5"></button>
+              <button type="button" class="swatch" style="background:#3ecf8e" data-color="#3ecf8e"></button>
+              <button type="button" class="swatch" style="background:#f5a07c" data-color="#f5a07c"></button>
+              <button type="button" class="swatch" style="background:#e67cb5" data-color="#e67cb5"></button>
+              <button type="button" class="swatch" style="background:#8f7cf5" data-color="#8f7cf5"></button>
+              <button type="button" class="swatch" style="background:#f5ce6b" data-color="#f5ce6b"></button>
+            </div>
+          </label>
+
+          <label class="field">
+            <span>卡片色调</span>
+            <div class="themes" id="themes">
+              <button type="button" class="theme-chip" style="background:#f5f7fc" data-theme="#f5f7fc" title="冰川蓝"></button>
+              <button type="button" class="theme-chip" style="background:#fdf6ef" data-theme="#fdf6ef" title="暖杏"></button>
+              <button type="button" class="theme-chip" style="background:#f0faf4" data-theme="#f0faf4" title="薄荷"></button>
+              <button type="button" class="theme-chip" style="background:#faf0f6" data-theme="#faf0f6" title="樱粉"></button>
+              <button type="button" class="theme-chip" style="background:#f2f0fa" data-theme="#f2f0fa" title="雾紫"></button>
+              <button type="button" class="theme-chip" style="background:#333a4d" data-theme="#333a4d" title="暗夜"></button>
+            </div>
+            <small class="tip">暗夜为深色卡片，文字自动变浅</small>
+          </label>
+
+          <label class="field">
+            <span>背景透明度</span>
+            <div class="opacity-row">
+              <input type="range" id="opacity" min="0" max="70" step="5" value="12" />
+              <span class="opacity-value" id="opacityValue">12%</span>
+            </div>
+            <small class="tip">数值越大越透（磨砂感强），越小越实（阅读性好）</small>
+          </label>
+
+          <label class="field">
+            <span>字体大小</span>
+            <div class="size-row">
+              <label class="size-option">
+                <input type="radio" name="fontSize" value="small" />
+                <span>小</span>
+              </label>
+              <label class="size-option">
+                <input type="radio" name="fontSize" value="medium" checked />
+                <span>中</span>
+              </label>
+              <label class="size-option">
+                <input type="radio" name="fontSize" value="large" />
+                <span>大</span>
+              </label>
+            </div>
+            <small class="tip">中间大字的大小</small>
+          </label>
+
+          <label class="field">
+            <span>卡片大小</span>
+            <div class="size-row">
+              <label class="size-option">
+                <input type="radio" name="cardSize" value="small" />
+                <span>小</span>
+              </label>
+              <label class="size-option">
+                <input type="radio" name="cardSize" value="medium" checked />
+                <span>中</span>
+              </label>
+              <label class="size-option">
+                <input type="radio" name="cardSize" value="large" />
+                <span>大</span>
+              </label>
+              <label class="size-option">
+                <input type="radio" name="cardSize" value="custom" />
+                <span>自定义</span>
+              </label>
+            </div>
+            <small class="tip">自定义大小：保存后，拖动桌面卡片右下角圆点调整</small>
+          </label>
+
+          <div id="autoHideWrap">
+            <label class="field">
+              <span>完成后自动隐藏</span>
+              <div class="autohide-row">
+                <label class="switch">
+                  <input type="checkbox" id="autoHide" />
+                  <span class="slider"></span>
+                </label>
+                <small class="tip" id="autoHideTip">达到触发次数后当天自动消失，次日自动恢复显示</small>
+              </div>
+            </label>
+            <label class="field hidden" id="autoHideCountField">
+              <span>隐藏触发次数</span>
+              <input type="number" id="autoHideCount" min="1" max="999" value="1" />
+              <small class="tip">当天打卡达到该次数后自动消失（默认 1）</small>
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn ghost" id="cancelBtn">取消</button>
+            <button class="btn primary" id="saveBtn">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 列表 -->
+      <div class="list" id="list"></div>
+      <div class="empty-list hidden" id="emptyList">还没有打卡项，点击上方按钮添加。</div>
+    </section>
+
+    <!-- ============ 布局标签页 ============ -->
+    <section class="panel hidden" id="panel-layout">
+      <p class="layout-hint">
+        拖动卡片到满意位置，松手即同步到桌面。<br/>
+        卡片右下角有圆点手柄，可直接在桌面上拖动调整大小。
+      </p>
+      <div class="canvas-wrap">
+        <div class="canvas" id="canvas"></div>
+      </div>
+      <p class="layout-tip" id="layoutTip">屏幕工作区（虚线框）内的卡片位置即桌面实际位置</p>
+    </section>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

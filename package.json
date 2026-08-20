@@ -1,0 +1,14 @@
+{
+  "name": "checkin-desktop",
+  "version": "0.1.0",
+  "description": "桌面常驻圆角半透明亚克力打卡组件",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^30.0.0"
+  }
+}

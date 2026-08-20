@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+  <title>打卡卡片</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-font="medium">
+  <!-- 每张卡片对应一个打卡项，窗口尺寸 = 卡片尺寸 -->
+  <div class="card" id="card">
+    <div class="bar" id="bar" title="拖动移动位置">
+      <span class="dot" id="dot"></span>
+      <button class="gear" id="gear" title="打开配置">⚙</button>
+    </div>
+
+    <div class="main" id="main" title="打卡">
+      <div class="big" id="big"></div>
+    </div>
+
+    <div class="progress-area hidden" id="progressArea">
+      <div class="track"><div class="fill" id="fill"></div></div>
+      <div class="count" id="count"></div>
+    </div>
+
+    <div class="resize" id="resize" title="拖动调整大小"></div>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>
