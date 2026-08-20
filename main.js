@@ -446,9 +446,19 @@ const FG_SKIP_CLASSES = new Set([
   'Windows.UI.Core.CoreWindow',    // UWP 系统 UI
   'MultitaskingViewFrame',         // 任务视图 / Alt-Tab
   'XamlExplorerHostIslandWindow',  // 资源管理器 XAML 宿主
+  'XamlExplorerHostIslandWindow_WASDK', // WinUI 3 宿主
   'RainmeterMeterWindow',          // Rainmeter 皮肤窗口
   'RainmeterSkinWindow',           // Rainmeter 皮肤窗口
-  'MyDockFinderDockWindow'         // My Dock Finder
+  'MyDockFinderDockWindow',        // My Dock Finder
+  'MyDockAPP',                     // My Dock Finder 窗口（实测类名）
+  'MyFinderApp',                   // My Dock Finder 窗口（实测类名）
+  'MyFinderAppDesktopBg',          // My Dock Finder 桌面背景
+  'MyDockFinderCaptureHwnd',       // My Dock Finder 隐藏捕获窗口
+  'EdgeUiInputTopWndClass',        // Edge 顶部输入条
+  'EdgeUiInputWndClass',           // Edge 输入窗口
+  'ApplicationFrameWindow',        // UWP 应用框架宿主
+  'SecHealth Window Class',        // Windows 安全中心托盘窗口
+  'ATL:0000000000000000'           // Defender 托盘隐藏窗口（ATL 类，按进程兜底）
 ]);
 const FG_SKIP_PROCESSES = new Set([
   'rainmeter',         // Rainmeter
@@ -460,7 +470,15 @@ const FG_SKIP_PROCESSES = new Set([
   'wallpaper32',       // Wallpaper Engine
   'wallpaper64',       // Wallpaper Engine
   'wallpaperservice64',// Wallpaper Engine 服务
-  'explorer'           // 资源管理器（桌面/任务栏由它承载）
+  'explorer',          // 资源管理器（桌面/任务栏由它承载）
+  'mpdefendercoreservice', // Windows Defender 核心服务
+  'msmpeng',           // Windows Defender 反恶意软件服务
+  'securityhealthservice', // Windows 安全中心服务
+  'securityhealthsystray', // Windows 安全中心托盘
+  'msseces',           // 旧版 Windows Defender / Security Essentials
+  'powershell',        // PowerShell 终端（全屏终端不应隐藏卡片）
+  'windowsterminal',   // Windows Terminal
+  'cmd'                // 命令提示符
 ]);
 
 function startForegroundMonitor() {
