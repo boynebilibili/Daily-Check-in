@@ -9,9 +9,20 @@
 <body data-font="medium">
   <!-- 每张卡片对应一个打卡项，窗口尺寸 = 卡片尺寸 -->
   <div class="card" id="card">
-    <div class="bar" id="bar" title="拖动移动位置">
-      <span class="dot" id="dot"></span>
-      <button class="gear" id="gear" title="打开配置">⚙</button>
+    <!-- 左上角锁头：点击锁定（禁拖拽），需在配置界面解锁 -->
+    <button class="lock" id="lock" title="锁定位置">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="11" width="16" height="9" rx="2"/>
+        <path class="lock-shackle" d="M8 11V7a4 4 0 0 1 8 0v4"/>
+      </svg>
+    </button>
+
+    <!-- 右上角设置 -->
+    <button class="gear" id="gear" title="打开配置">⚙</button>
+
+    <!-- 上方边缘拖拽把手：只有拖动它才能移动卡片 -->
+    <div class="drag-handle" id="dragHandle" title="拖动移动位置">
+      <span></span><span></span><span></span>
     </div>
 
     <div class="main" id="main" title="打卡">

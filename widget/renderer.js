@@ -65,7 +65,19 @@ function render() {
   document.body.classList.toggle('dark', isDarkTheme(theme));
   document.body.dataset.font = item.fontSize || 'medium';
 
-  document.getElementById('dot').style.background = accent;
+  // 锁定状态：禁拖拽、隐藏缩放手柄、锁头常显
+  const locked = !!item.locked;
+  card.classList.toggle('locked', locked);
+  const lockEl = document.getElementById('lock');
+  lockEl.classList.toggle('locked', locked);
+  lockEl.title = locked ? '已锁定（需在配置界面解锁）' : '锁定位置';
+  // 锁头图标：锁定实心 / 解锁空心
+  const shackle = lockEl.querySelector('.lock-shackle');
+  if (shackle) {
+    shackle.setAttribute('d', locked
+      ? 'M8 11V7a4 4 0 0 1 8 0v4'
+      : 'M8 11V7a4 4 0 0 1 7.6-3.9');
+  }
 
   const rec = (state.records && state.records[item.id]) || {};
   const big = document.getElementById('big');
@@ -222,6 +234,36 @@ function bindEvents() {
     });
   });
 
+  // 左下角锁头：点击锁定（禁拖拽）；解锁只能通过配置界面
+  document.getElementById('lock').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const item = (state && state.items || []).find((i) => i.id === ITEM_ID);
+    if (item && item.locked) return;  // 已锁定：点击无效（需配置界面解锁）
+    window.api.lockCard(ITEM_ID);
+  });
+
+  // 角标显隐：鼠标在对应角落区域才显示该角的图标
+  setupCornerIcons();
+
+  // 上边缘三点把手：JS 拖拽移动（锁定时禁用）
+  const dragHandleEl = document.getElementById('dragHandle');
+  dragHandleEl.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const item = (state && state.items || []).find((i) => i.id === ITEM_ID);
+    if (item && item.locked) return;  // 锁定卡片禁止拖动
+    window.api.dragStart(ITEM_ID, {
+      startScreenX: e.screenX,
+      startScreenY: e.screenY
+    });
+    const up = () => {
+      window.api.dragEnd();
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mouseup', up);
+  });
+
   // 右下角圆点手柄拖拽缩放
   const resizeEl = document.getElementById('resize');
   resizeEl.addEventListener('mousedown', (e) => {
@@ -240,6 +282,41 @@ function bindEvents() {
     };
     window.addEventListener('mouseup', up);
   });
+}
+
+/* ---------- 角标显隐：鼠标在四角或上边缘 → 显示全部图标 ---------- */
+const CORNER_ZONE = 44;   // 角落判定区域（像素）
+const EDGE_ZONE = 26;     // 上边缘判定区域（像素）
+function setupCornerIcons() {
+  const card = document.getElementById('card');
+  const gear = document.getElementById('gear');        // 右上
+  const lock = document.getElementById('lock');        // 左上
+  const resize = document.getElementById('resize');    // 右下
+  const dragHandle = document.getElementById('dragHandle'); // 上中
+  const icons = [gear, lock, resize, dragHandle];
+
+  const clear = () => {
+    icons.forEach((el) => el && el.classList.remove('corner-show'));
+  };
+
+  card.addEventListener('mousemove', (e) => {
+    const r = card.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+    const w = r.width, h = r.height;
+    // 四角 或 上边缘 → 显示全部图标
+    const inCorner =
+      (x <= CORNER_ZONE || x >= w - CORNER_ZONE) &&
+      (y <= CORNER_ZONE || y >= h - CORNER_ZONE);
+    const inTopEdge = y <= EDGE_ZONE;
+    if (inCorner || inTopEdge) {
+      icons.forEach((el) => el && el.classList.add('corner-show'));
+    } else {
+      clear();
+    }
+  });
+
+  card.addEventListener('mouseleave', clear);
 }
 
 /* ---------- 初始化 ---------- */

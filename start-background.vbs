@@ -8,5 +8,6 @@ Set ws = CreateObject("WScript.Shell")
 appDir = fso.GetParentFolderName(WScript.ScriptFullName)
 ws.CurrentDirectory = appDir
 
-' Run hidden (0) and do not wait (False): process runs independently
-ws.Run "cmd /c npm start", 0, False
+' Run Electron directly so the launcher never opens or owns a terminal window.
+electronExe = appDir & "\node_modules\electron\dist\electron.exe"
+ws.Run Chr(34) & electronExe & Chr(34) & " .", 0, False

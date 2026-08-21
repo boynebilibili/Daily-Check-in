@@ -19,9 +19,14 @@ contextBridge.exposeInMainWorld('api', {
   setCardSize: (id, size) => ipcRenderer.invoke('card:setSize', { id, size }),
   resizeStart: (id, info) => ipcRenderer.invoke('card:resizeStart', { id, ...info }),
   resizeEnd: () => ipcRenderer.invoke('card:resizeEnd'),
+  dragStart: (id, info) => ipcRenderer.invoke('card:dragStart', { id, ...info }),
+  dragEnd: () => ipcRenderer.invoke('card:dragEnd'),
 
   // 目标完成后自动隐藏（动画播完通知主进程）
   cardAutoHidden: (id) => ipcRenderer.invoke('card:autoHidden', id),
+
+  // 锁定卡片位置（解锁需通过配置界面）
+  lockCard: (id) => ipcRenderer.invoke('card:lock', id),
 
   // 屏幕
   getWorkArea: () => ipcRenderer.invoke('screen:workarea'),

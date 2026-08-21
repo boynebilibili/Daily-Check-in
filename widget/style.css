@@ -1,15 +1,20 @@
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-html, body {
+html,
+body {
   width: 100%;
   height: 100%;
   background: transparent;
   overflow: hidden;
   /* 与 VS Code 一致的字体：英文/数字 Monaspace Argon，中文钉钉进步体 */
   font-family: "Monaspace Argon Var", "Monaspace Argon Var ExtraBold",
-               "DingTalk JinBuTi", "钉钉进步体",
-               "Maple Mono NF CN", "Maple Mono NF CN ExtraBold",
-               Consolas, "Courier New", monospace;
+    "DingTalk JinBuTi", "钉钉进步体",
+    "Maple Mono NF CN", "Maple Mono NF CN ExtraBold",
+    Consolas, "Courier New", monospace;
   -webkit-user-select: none;
   user-select: none;
 }
@@ -26,82 +31,181 @@ html, body {
      setShape 的系统形状只负责鼠标穿透与兜底 */
   clip-path: inset(0 round 20px);
   -webkit-clip-path: inset(0 round 20px);
-  /* 有底色的半透明：不透明度提高，保证阅读性 */
+  /* 半透明底色（不透明度由用户调节） */
   background: var(--theme, rgba(232, 238, 250, 0.88));
-  backdrop-filter: blur(28px) saturate(160%);
-  -webkit-backdrop-filter: blur(28px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  border: none;
   box-shadow:
+    /* 白边：内阴影跟随圆角弧线，不被 clip-path 裁切 */
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    /* 顶部细高光 */
     inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    /* 底部柔光 */
     inset 0 -28px 34px rgba(255, 255, 255, 0.14);
 }
 
 /* 深色主题（暗夜卡片） */
 body.dark .card {
-  border-color: rgba(255, 255, 255, 0.14);
   box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
     inset 0 -28px 34px rgba(0, 0, 0, 0.25);
 }
-body.dark .count,
-body.dark .track { color: rgba(255, 255, 255, 0.85); }
 
-/* ---------- 顶部条：色点 + 配置，均悬停显现 ---------- */
-.bar {
-  display: flex;
-  align-items: center;
-  padding: 10px 12px 0;
-  -webkit-app-region: drag;
-  cursor: grab;
+body.dark .count,
+body.dark .track {
+  color: rgba(255, 255, 255, 0.85);
 }
-.dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  background: var(--accent, #7c9cf5);
-  opacity: 0;
-  transition: opacity 0.18s ease, transform 0.15s ease;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #7c9cf5) 18%, transparent);
+
+/* ---------- 角标图标（默认隐藏，四角/上边缘触发显示） ---------- */
+.corner-show {
+  opacity: 1 !important;
 }
-.card:hover .dot { opacity: 1; }
+
+/* 右上角设置 */
 .gear {
-  -webkit-app-region: no-drag;
-  margin-left: auto;
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(120, 140, 200, 0.25);
-  border-radius: 8px;
+  position: absolute;
+  top: 9px;
+  right: 9px;
   width: 24px;
   height: 24px;
-  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid rgba(120, 140, 200, 0.25);
+  background: rgba(255, 255, 255, 0.6);
   color: #4a5578;
+  font-size: 13px;
   cursor: pointer;
-  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0;
   transition: opacity 0.18s ease, transform 0.12s ease, background 0.12s ease;
+  z-index: 5;
+  -webkit-app-region: no-drag;
 }
-.card:hover .gear { opacity: 0.8; }
-.gear:hover { background: rgba(255, 255, 255, 0.95); transform: scale(1.08); opacity: 1 !important; }
+
+.gear:hover {
+  background: rgba(255, 255, 255, 0.95);
+  transform: scale(1.08);
+}
+
 body.dark .gear {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.2);
   color: #dfe4f5;
 }
 
-/* ---------- 主体：大字 ---------- */
-.main {
-  flex: 1;
+/* ---------- 左上角锁头 ---------- */
+.lock {
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  border: 1px solid rgba(120, 140, 200, 0.25);
+  background: rgba(255, 255, 255, 0.6);
+  color: #4a5578;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 0;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.12s ease, background 0.12s ease, color 0.15s ease;
+  z-index: 5;
+  -webkit-app-region: no-drag;
+}
+
+.lock:hover {
+  background: rgba(255, 255, 255, 0.95);
+  transform: scale(1.1);
+}
+
+/* 已锁定：实心锁样式（不常显，仍按角落/上边缘触发显示） */
+.lock.locked {
+  background: color-mix(in srgb, var(--accent, #7c9cf5) 18%, white);
+  border-color: color-mix(in srgb, var(--accent, #7c9cf5) 45%, transparent);
+  color: var(--accent, #7c9cf5);
+}
+
+.lock.locked:hover {
+  transform: scale(1.1);
+}
+
+body.dark .lock {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #dfe4f5;
+}
+
+body.dark .lock.locked {
+  background: color-mix(in srgb, var(--accent, #7c9cf5) 30%, #22262f);
+  color: #a9c2ff;
+}
+
+/* ---------- 上方边缘拖拽把手（三点） ---------- */
+.drag-handle {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(120, 140, 200, 0.25);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.18s ease, background 0.12s ease;
+  z-index: 5;
+  -webkit-app-region: no-drag;
+  /* 由 JS 拖动接管 */
+}
+
+.drag-handle span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #8a94b3;
+}
+
+.drag-handle:hover {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+body.dark .drag-handle {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.dark .drag-handle span {
+  background: #aab3cd;
+}
+
+/* 锁定后：禁止拖拽 + 隐藏把手 */
+.card.locked .drag-handle {
+  cursor: default;
+  display: none;
+}
+
+/* ---------- 主体：大字 ---------- */
+.main {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   -webkit-app-region: no-drag;
   padding: 6px 16px;
   transition: transform 0.12s ease;
+  z-index: 1;
 }
+
 /* 点击反馈缩放由 JS 控制（仅左键），避免右键减打卡时误触发 */
-.main.pressing { transform: scale(0.96); }
+.main.pressing {
+  transform: scale(0.96);
+}
 
 .big {
   font-size: var(--big-size, 52px);
@@ -115,13 +219,28 @@ body.dark .gear {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-body.dark .big { color: #f4f6ff; }
+
+/* 统计区域固定在卡片底部，不参与名称的垂直居中 */
+.progress-area {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+}
+
+body.dark .big {
+  color: #f4f6ff;
+}
 
 /* 完成态：文字变绿 */
 .big.done {
   color: #2bb97e;
 }
-body.dark .big.done { color: #5ce6a8; }
+
+body.dark .big.done {
+  color: #5ce6a8;
+}
 
 /* ---------- 进度条区域（目标项） ---------- */
 .progress-area {
@@ -130,6 +249,7 @@ body.dark .big.done { color: #5ce6a8; }
   flex-direction: column;
   gap: 7px;
 }
+
 .track {
   height: 10px;
   border-radius: 6px;
@@ -137,10 +257,12 @@ body.dark .big.done { color: #5ce6a8; }
   border: 1px solid color-mix(in srgb, var(--accent, #7c9cf5) 26%, transparent);
   overflow: hidden;
 }
+
 body.dark .track {
   background: rgba(255, 255, 255, 0.1);
   border-color: rgba(255, 255, 255, 0.22);
 }
+
 .fill {
   height: 100%;
   border-radius: 5px;
@@ -148,6 +270,7 @@ body.dark .track {
   box-shadow: 0 0 8px color-mix(in srgb, var(--accent, #7c9cf5) 45%, transparent);
   transition: width 0.3s ease;
 }
+
 .count {
   text-align: center;
   font-size: 14px;
@@ -157,7 +280,7 @@ body.dark .track {
   letter-spacing: 1px;
 }
 
-/* ---------- 缩放手柄：圆点，悬停显现 ---------- */
+/* ---------- 缩放手柄：圆点，仅角落显现 ---------- */
 .resize {
   position: absolute;
   right: 7px;
@@ -171,10 +294,15 @@ body.dark .track {
   opacity: 0;
   transition: opacity 0.18s ease, background 0.15s ease, transform 0.15s ease;
 }
-.card:hover .resize { opacity: 1; }
+
 .resize:hover {
   background: var(--accent, #7c9cf5);
   transform: scale(1.25);
+}
+
+/* 锁定时隐藏缩放手柄 */
+.card.locked .resize {
+  display: none;
 }
 
 /* ---------- 完成自动隐藏：消失动画 ----------
@@ -183,22 +311,26 @@ body.dark .track {
   animation: hideAway 0.9s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   pointer-events: none;
 }
+
 @keyframes hideAway {
   0% {
     opacity: 1;
     transform: scale(1) translateY(0);
     filter: blur(0px);
   }
+
   18% {
     opacity: 1;
     transform: scale(1.06) translateY(0);
     filter: blur(0px);
   }
+
   38% {
     opacity: 0.95;
     transform: scale(1.04) translateY(-4px);
     filter: blur(1px);
   }
+
   100% {
     opacity: 0;
     transform: scale(0.82) translateY(-34px);
@@ -210,43 +342,92 @@ body.dark .track {
 .card.check-anim {
   animation: checkPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
+
 @keyframes checkPop {
-  0% { transform: scale(1); }
-  45% { transform: scale(1.04) translateY(-2px); }
-  75% { transform: scale(0.99); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  45% {
+    transform: scale(1.04) translateY(-2px);
+  }
+
+  75% {
+    transform: scale(0.99);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
+
 .big.check-bump,
 .count.check-bump {
   animation: checkBump 0.35s ease;
   color: #3ecf8e !important;
 }
+
 @keyframes checkBump {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.3); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.3);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* ---------- 减打卡动画：轻微下沉回弹 + 数字跳动 ---------- */
 .card.minus-anim {
   animation: minusPop 0.3s ease;
 }
+
 @keyframes minusPop {
-  0% { transform: scale(1); }
-  40% { transform: scale(0.98) translateY(1px); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  40% {
+    transform: scale(0.98) translateY(1px);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
+
 .count.bump {
   animation: countBump 0.3s ease;
   color: #e05555 !important;
 }
+
 @keyframes countBump {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.18); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.18);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* ---------- 字体档位（大字） ---------- */
-body[data-font="small"] { --big-size: clamp(28px, 16vw, 44px); }
-body[data-font="medium"] { --big-size: clamp(38px, 21vw, 64px); }
-body[data-font="large"] { --big-size: clamp(52px, 28vw, 92px); }
+body[data-font="small"] {
+  --big-size: clamp(28px, 16vw, 44px);
+}
+
+body[data-font="medium"] {
+  --big-size: clamp(38px, 21vw, 64px);
+}
+
+body[data-font="large"] {
+  --big-size: clamp(52px, 28vw, 92px);
+}

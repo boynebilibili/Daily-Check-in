@@ -277,6 +277,14 @@ input:focus, select:focus {
   border-radius: 6px;
   font-size: 11px;
 }
+.lock-tag {
+  color: #b07a3c;
+  font-weight: 600;
+  background: rgba(245, 160, 124, 0.14);
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 11px;
+}
 .list-item .actions { display: flex; gap: 6px; }
 .list-item .actions button {
   border: none;
@@ -289,6 +297,7 @@ input:focus, select:focus {
   transition: background 0.15s ease;
 }
 .list-item .actions button.edit:hover { background: #dde6ff; color: #4a6cf5; }
+.list-item .actions button.unlock:hover { background: #e6f6ee; color: #2ba06a; }
 .list-item .actions button.del:hover { background: #ffe1e1; color: #e05555; }
 
 .empty-list {

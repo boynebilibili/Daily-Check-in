@@ -110,14 +110,19 @@ function renderItems() {
       const autoHideTag = it.type === 'goal'
         ? ' · <b class="autohide-tag">完成后隐藏</b>'
         : (it.autoHide ? ' · <b class="autohide-tag">完成后隐藏' + (it.autoHideCount > 1 ? ` ${it.autoHideCount}次` : '') + '</b>' : '');
+      const lockTag = it.locked ? ' · <b class="lock-tag">已锁定</b>' : '';
+      const unlockBtn = it.locked
+        ? `<button class="unlock" data-id="${it.id}">解锁</button>`
+        : '';
       return `
         <div class="list-item" data-id="${it.id}">
           <span class="dot" style="background:${esc(it.color || '#7c9cf5')}"></span>
           <div class="info">
             <div class="name">${esc(it.name)}</div>
-            <div class="meta">${meta} · 卡片 ${sizeName} · 字 ${fontName}${autoHideTag}</div>
+            <div class="meta">${meta} · 卡片 ${sizeName} · 字 ${fontName}${autoHideTag}${lockTag}</div>
           </div>
           <div class="actions">
+            ${unlockBtn}
             <button class="edit" data-id="${it.id}">编辑</button>
             <button class="del" data-id="${it.id}">删除</button>
           </div>
@@ -304,7 +309,10 @@ function bindEvents() {
     if (!btn) return;
     const id = btn.dataset.id;
 
-    if (btn.classList.contains('del')) {
+    if (btn.classList.contains('unlock')) {
+      // 快速解锁：仅锁定项显示此按钮
+      await window.api.updateItem({ id, changes: { locked: false } });
+    } else if (btn.classList.contains('del')) {
       if (confirm('确定删除这个打卡项吗？')) {
         await window.api.deleteItem(id);
       }

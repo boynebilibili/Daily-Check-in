@@ -32,6 +32,7 @@ let resizeJob = null;       // 正在拖拽缩放的卡片
 let fgMonitor = null;       // 前台窗口监控子进程
 let fgFullscreen = false;   // 前台应用是否全屏
 let trayHidden = false;     // 托盘手动隐藏
+let isQuitting = false;     // 仅托盘“退出”或系统退出时真正结束进程
 const autoHiddenIds = new Set(); // 完成目标后自动隐藏的卡片（当天）
 let autoHideTimer = null;   // 每日自动恢复定时器
 
@@ -329,11 +330,18 @@ function createConfigWindow() {
   });
   configWin.loadFile(path.join(__dirname, 'config', 'index.html'));
   attachRendererCrashGuard(configWin);
-  // 关闭按钮 → 隐藏窗口而非销毁（程序常驻托盘，再次打开秒回）
+  // 关闭和最小化统一隐藏到托盘，不销毁配置窗口
   configWin.on('close', (e) => {
+    if (isQuitting) return;
     e.preventDefault();
     configWin.hide();
-    applyVisibility();  // 隐藏配置窗口后恢复全屏隐藏逻辑
+    applyVisibility();
+  });
+  configWin.on('minimize', (e) => {
+    if (isQuitting) return;
+    e.preventDefault();
+    configWin.hide();
+    applyVisibility();
   });
   configWin.on('closed', () => {
     configWin = null;
@@ -574,7 +582,7 @@ function createTray() {
       { label: '打开配置', click: () => createConfigWindow() },
       { label: '显示/隐藏所有卡片', click: toggleTrayVisibility },
       { type: 'separator' },
-      { label: '退出', click: () => app.quit() }
+      { label: '退出', click: () => { isQuitting = true; app.quit(); } }
     ]);
     tray.setContextMenu(menu);
     tray.on('click', () => createConfigWindow());
@@ -837,6 +845,10 @@ app.whenReady().then(() => {
 });
 
 // 退出时清理前台监控子进程和定时器
+app.on('before-quit', () => {
+  isQuitting = true;
+});
+
 app.on('will-quit', () => {
   if (fgMonitor) {
     try { fgMonitor.kill(); } catch (e) { /* 忽略 */ }
