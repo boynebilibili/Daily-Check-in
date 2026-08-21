@@ -11,11 +11,10 @@ set "APP_DIR=D:\1project\Daily Check-in"
 set "STARTUP_DIR=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
 set "LINK=%STARTUP_DIR%\checkin-desktop.bat"
 
-rem Build the startup launcher (silent, minimized)
+rem Build the startup launcher (fully detached, hidden)
 (
   echo @echo off
-  echo cd /d "%APP_DIR%"
-  echo start "" /min cmd /c "npm start"
+  echo wscript.exe "%APP_DIR%\start-background.vbs"
 ) > "%LINK%"
 
 if exist "%LINK%" (

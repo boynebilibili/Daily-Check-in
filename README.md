@@ -22,6 +22,9 @@ npm install
 npm start
 ```
 
+> 提示：`npm start` 依赖终端窗口，关闭终端会退出应用。
+> 想后台常驻（关闭终端也不影响），双击 **`start-background.vbs`** 或运行 **`start-background.bat`** 即可。
+
 启动后：
 
 1. 桌面上每张卡片独立显示，新卡片默认堆叠在屏幕右下角

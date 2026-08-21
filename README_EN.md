@@ -22,6 +22,9 @@ npm install
 npm start
 ```
 
+> Tip: `npm start` depends on the terminal window; closing it exits the app.
+> For a persistent background process (terminal-independent), double-click **`start-background.vbs`** or run **`start-background.bat`**.
+
 After launching:
 
 1. Each card is displayed independently on the desktop; new cards are stacked at the bottom-right of the screen by default
