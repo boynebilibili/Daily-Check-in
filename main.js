@@ -320,6 +320,7 @@ function createConfigWindow() {
     title: '打卡配置',
     backgroundColor: '#f2f4f8',
     autoHideMenuBar: true,
+    skipTaskbar: true,  // 不占任务栏：整个程序只通过托盘访问
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -328,9 +329,15 @@ function createConfigWindow() {
   });
   configWin.loadFile(path.join(__dirname, 'config', 'index.html'));
   attachRendererCrashGuard(configWin);
+  // 关闭按钮 → 隐藏窗口而非销毁（程序常驻托盘，再次打开秒回）
+  configWin.on('close', (e) => {
+    e.preventDefault();
+    configWin.hide();
+    applyVisibility();  // 隐藏配置窗口后恢复全屏隐藏逻辑
+  });
   configWin.on('closed', () => {
     configWin = null;
-    applyVisibility();  // 配置窗口关闭后恢复全屏隐藏逻辑
+    applyVisibility();
   });
   // 窗口默认 show:true，创建即显示；直接评估可见性（不依赖可能错过的 show 事件）
   applyVisibility();
@@ -412,6 +419,17 @@ function shouldAutoHideToday(item, data) {
 ipcMain.handle('card:autoHidden', (e, id) => {
   autoHiddenIds.add(id);
   applyVisibility();
+});
+
+// 锁定卡片：禁拖拽、禁缩放（解锁需通过配置界面）
+ipcMain.handle('card:lock', (e, id) => {
+  const data = loadData();
+  const item = data.items.find((i) => i.id === id);
+  if (!item) return data;
+  item.locked = true;
+  saveData(data);
+  broadcast(data);
+  return data;
 });
 
 // 数据变化后重新评估自动隐藏状态（完成→隐藏，取消完成/跨天→恢复）
@@ -593,6 +611,7 @@ ipcMain.handle('item:add', (e, payload) => {
     theme: /^#[0-9a-fA-F]{6}$/.test(payload.theme || '') ? payload.theme : '#f5f7fc',
     autoHide: !!payload.autoHide,
     autoHideCount: Math.max(1, parseInt(payload.autoHideCount, 10) || 1),
+    locked: !!payload.locked,
     sort: data.items.length,
     card: { size: sizeName, w: size.w, h: size.h, x: pos.x, y: pos.y }
   };
@@ -623,6 +642,7 @@ ipcMain.handle('item:update', (e, { id, changes }) => {
   if (changes.autoHideCount !== undefined) {
     item.autoHideCount = Math.max(1, parseInt(changes.autoHideCount, 10) || 1);
   }
+  if (typeof changes.locked === 'boolean') item.locked = changes.locked;
   if (['small', 'medium', 'large'].includes(changes.fontSize)) item.fontSize = changes.fontSize;
   if (/^#[0-9a-fA-F]{6}$/.test(changes.theme || '')) item.theme = changes.theme;
   // 背景透明度（0.3 ~ 1）
@@ -751,6 +771,55 @@ ipcMain.handle('card:resizeEnd', () => {
   broadcast(data);
 });
 
+// 三点把手拖拽移动窗口：主进程轮询鼠标位置（锁定卡片不接受）
+let dragJob = null;
+ipcMain.handle('card:dragStart', (e, { id, startScreenX, startScreenY }) => {
+  const win = itemWins.get(id);
+  if (!win || win.isDestroyed()) return;
+  // 已锁定的卡片禁止拖动
+  const data = loadData();
+  const item = data.items.find((i) => i.id === id);
+  if (item && item.locked) return;
+  if (dragJob) {
+    clearInterval(dragJob.timer);
+    dragJob = null;
+  }
+  const [ox, oy] = win.getPosition();
+  dragJob = { id, win, ox, oy, startScreenX, startScreenY };
+  dragJob.timer = setInterval(() => {
+    const job = dragJob;
+    if (!job) return;
+    if (!job.win || job.win.isDestroyed()) {
+      clearInterval(job.timer);
+      dragJob = null;
+      return;
+    }
+    const p = screen.getCursorScreenPoint();
+    const nx = job.ox + (p.x - job.startScreenX);
+    const ny = job.oy + (p.y - job.startScreenY);
+    job.win.setPosition(Math.round(nx), Math.round(ny));
+  }, 16);
+});
+
+ipcMain.handle('card:dragEnd', () => {
+  const job = dragJob;
+  if (!job) return;
+  clearInterval(job.timer);
+  dragJob = null;
+  if (!job.win || job.win.isDestroyed()) return;
+  // 位置已由 moved 事件防抖保存；这里兜底保存一次
+  const [x, y] = job.win.getPosition();
+  const data = loadData();
+  const item = data.items.find((i) => i.id === job.id);
+  if (item) {
+    item.card = item.card || {};
+    item.card.x = x;
+    item.card.y = y;
+    saveData(data);
+  }
+  broadcast(data);
+});
+
 ipcMain.handle('screen:workarea', () => screen.getPrimaryDisplay().workArea);
 
 ipcMain.handle('config:open', () => createConfigWindow());
@@ -776,6 +845,14 @@ app.on('will-quit', () => {
   if (autoHideTimer) {
     clearInterval(autoHideTimer);
     autoHideTimer = null;
+  }
+  if (dragJob) {
+    clearInterval(dragJob.timer);
+    dragJob = null;
+  }
+  if (resizeJob) {
+    clearInterval(resizeJob.timer);
+    resizeJob = null;
   }
 });
 
