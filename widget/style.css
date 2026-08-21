@@ -188,10 +188,21 @@ body.dark .drag-handle span {
   display: none;
 }
 
-/* ---------- 主体：大字 ---------- */
-.main {
+/* ---------- 内容区：名称 + 统计整体垂直居中 ---------- */
+.content {
   position: absolute;
   inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  z-index: 1;
+  pointer-events: none;  /* 点击交给 .main */
+}
+
+/* 主体：大字（可点击打卡） */
+.main {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -199,7 +210,8 @@ body.dark .drag-handle span {
   -webkit-app-region: no-drag;
   padding: 6px 16px;
   transition: transform 0.12s ease;
-  z-index: 1;
+  pointer-events: auto;
+  max-width: 100%;
 }
 
 /* 点击反馈缩放由 JS 控制（仅左键），避免右键减打卡时误触发 */
@@ -220,15 +232,6 @@ body.dark .drag-handle span {
   text-overflow: ellipsis;
 }
 
-/* 统计区域固定在卡片底部，不参与名称的垂直居中 */
-.progress-area {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 2;
-}
-
 body.dark .big {
   color: #f4f6ff;
 }
@@ -244,10 +247,11 @@ body.dark .big.done {
 
 /* ---------- 进度条区域（目标项） ---------- */
 .progress-area {
-  padding: 2px 18px 14px;
   display: flex;
   flex-direction: column;
   gap: 7px;
+  padding: 2px 18px 4px;
+  width: 100%;
 }
 
 .track {

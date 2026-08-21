@@ -29,6 +29,7 @@ let configWin = null;
 let tray = null;
 const itemWins = new Map(); // itemId -> BrowserWindow
 let resizeJob = null;       // 正在拖拽缩放的卡片
+let dragJob = null;         // 正在拖拽移动的卡片
 let trayHidden = false;     // 托盘手动隐藏
 let isQuitting = false;     // 仅托盘“退出”或系统退出时真正结束进程
 const autoHiddenIds = new Set(); // 完成目标后自动隐藏的卡片（当天）
@@ -205,7 +206,7 @@ function applyShape(win) {
   win.setShape(roundedShape(b.width, b.height, CARD_RADIUS));
 }
 
-// 把卡片窗口挂载到桌面层（WorkerW / 壁纸宿主层）
+// 把卡片窗口挂载到桌面层（Progman，桌面图标宿主，可见）
 // 效果：窗口"住进"桌面，任何普通应用打开时自然覆盖它（遮罩），
 // 无需再检测全屏 —— 与 Wallpaper Engine / Rainmeter 同层
 const ATTACH_SCRIPT = path.join(__dirname, 'attach-to-desktop.ps1');
@@ -256,12 +257,22 @@ function nextCardPos(data, size) {
   };
 }
 
-function createCardWindow(item) {
+function createCardWindow(item, data) {
   const size = cardSizeOf(item);
   const card = item.card || {};
-  const wa = screen.getPrimaryDisplay().workArea;
-  const x = (card.x != null) ? card.x : (wa.x + wa.width - size.w - 24);
-  const y = (card.y != null) ? card.y : (wa.y + wa.height - size.h - 24);
+  // 有保存位置则恢复；否则用与新增一致的堆叠默认位置
+  let x, y;
+  if (card.x != null && card.y != null) {
+    x = card.x;
+    y = card.y;
+  } else {
+    const pos = nextCardPos(data, size);
+    x = pos.x;
+    y = pos.y;
+    item.card = item.card || {};
+    item.card.x = x;
+    item.card.y = y;
+  }
 
   const win = new BrowserWindow({
     width: size.w,
@@ -269,7 +280,7 @@ function createCardWindow(item) {
     x, y,
     transparent: true,
     frame: false,
-    // 不再 alwaysOnTop：窗口挂载到桌面层（WorkerW），由系统层级自然决定遮盖
+    // 不再 alwaysOnTop：窗口挂载到桌面层（Progman），由系统层级自然决定遮盖
     skipTaskbar: true,
     resizable: false,
     focusable: false,
@@ -330,7 +341,7 @@ function syncWidgetWindows(data) {
   for (const item of data.items) {
     let win = itemWins.get(item.id);
     if (!win || win.isDestroyed()) {
-      createCardWindow(item);
+      createCardWindow(item, data);
       continue;
     }
     const size = cardSizeOf(item);
@@ -351,7 +362,6 @@ function createConfigWindow() {
   if (configWin && !configWin.isDestroyed()) {
     configWin.show();
     configWin.focus();
-    applyVisibility();  // 配置窗口重新可见 → 强制显示卡片
     return;
   }
   configWin = new BrowserWindow({
@@ -392,7 +402,7 @@ function createConfigWindow() {
   applyVisibility();
 }
 
-/* ---------------- 托盘 ---------------- */
+/* ---------------- 托盘图标 ---------------- */
 
 function createTrayIcon() {
   const size = 16;
@@ -715,7 +725,6 @@ ipcMain.handle('card:resizeEnd', () => {
 });
 
 // 三点把手拖拽移动窗口：主进程轮询鼠标位置（锁定卡片不接受）
-let dragJob = null;
 ipcMain.handle('card:dragStart', (e, { id, startScreenX, startScreenY }) => {
   const win = itemWins.get(id);
   if (!win || win.isDestroyed()) return;

@@ -1,7 +1,8 @@
 # Checkin Desktop - attach window to the desktop layer
 # Usage: powershell -File attach-to-desktop.ps1 <hwnd-as-decimal> <x> <y>
-# The window becomes a child of the desktop host (Progman / WorkerW),
-# so normal apps naturally cover it (遮罩) — same technique as Wallpaper Engine / Rainmeter.
+# The window becomes a child of the desktop host (Progman, which hosts the
+# icon view and is visible), so normal apps naturally cover it (遮罩) —
+# same technique as Wallpaper Engine / Rainmeter.
 param([string]$Hwnd, [int]$PosX = -1, [int]$PosY = -1)
 Add-Type -TypeDefinition @"
 using System;

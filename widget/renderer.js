@@ -161,6 +161,28 @@ function resetHideAnim(card) {
   void card.offsetWidth;
 }
 
+// 通用"点击反馈"动画：给卡片加弹跳动画 + 给数字/大字加颜色跳动动画
+// animClass/bumpClass 分别对应打卡（绿）与减打卡（红）
+function playBump(card, bumpTarget, animClass, bumpClass, durationMs) {
+  const clearAnim = () => {
+    card.classList.remove(animClass);
+    if (bumpTarget) bumpTarget.classList.remove(bumpClass);
+  };
+  card.classList.remove(animClass);
+  void card.offsetWidth;  // 强制重排，确保动画可重复触发
+  card.classList.add(animClass);
+  if (bumpTarget) {
+    bumpTarget.classList.remove(bumpClass);
+    void bumpTarget.offsetWidth;
+    bumpTarget.classList.add(bumpClass);
+  }
+  // 动画播完即清理（比 setTimeout 可靠，隐藏窗口时定时器会被节流）
+  card.addEventListener('animationend', clearAnim, { once: true });
+  if (bumpTarget) bumpTarget.addEventListener('animationend', clearAnim, { once: true });
+  // 兜底：若动画未播放（窗口隐藏）也清理
+  setTimeout(clearAnim, durationMs);
+}
+
 /* ---------- 事件 ---------- */
 function bindEvents() {
   document.getElementById('gear').addEventListener('click', (e) => {
@@ -173,54 +195,16 @@ function bindEvents() {
   mainEl.addEventListener('click', () => {
     // 打卡动画反馈：卡片弹起回弹 + 数字/大字变绿跳动
     const card = document.getElementById('card');
-    const countEl = document.getElementById('count');
-    const bigEl = document.getElementById('big');
-    const clearAnim = () => {
-      card.classList.remove('check-anim');
-      if (countEl) countEl.classList.remove('check-bump');
-      if (bigEl) bigEl.classList.remove('check-bump');
-    };
-    card.classList.remove('check-anim');
-    void card.offsetWidth;  // 强制重排，确保动画可重复触发
-    card.classList.add('check-anim');
-    const bumpTarget = countEl || bigEl;
-    if (bumpTarget) {
-      bumpTarget.classList.remove('check-bump');
-      void bumpTarget.offsetWidth;
-      bumpTarget.classList.add('check-bump');
-    }
-    // 动画播完即清理（比 setTimeout 可靠，隐藏窗口时定时器会被节流）
-    card.addEventListener('animationend', clearAnim, { once: true });
-    if (bumpTarget) bumpTarget.addEventListener('animationend', clearAnim, { once: true });
-    // 兜底：若动画未播放（窗口隐藏）也清理
-    setTimeout(clearAnim, 800);
+    const bumpTarget = document.getElementById('count') || document.getElementById('big');
+    playBump(card, bumpTarget, 'check-anim', 'check-bump', 800);
     window.api.toggleCheckin(ITEM_ID);
   });
   mainEl.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-    // 减打卡动画反馈：卡片下沉回弹 + 数字变红跳动
+    // 减打卡动画反馈：卡片下沉回弹 + 数字/大字变红跳动
     const card = document.getElementById('card');
-    const countEl = document.getElementById('count');
-    const bigEl = document.getElementById('big');
-    const clearAnim = () => {
-      card.classList.remove('minus-anim');
-      if (countEl) countEl.classList.remove('bump');
-      if (bigEl) bigEl.classList.remove('bump');
-    };
-    card.classList.remove('minus-anim');
-    void card.offsetWidth;  // 强制重排，确保动画可重复触发
-    card.classList.add('minus-anim');
-    const bumpTarget = countEl || bigEl;
-    if (bumpTarget) {
-      bumpTarget.classList.remove('bump');
-      void bumpTarget.offsetWidth;
-      bumpTarget.classList.add('bump');
-    }
-    // 动画播完即清理（比 setTimeout 可靠，隐藏窗口时定时器会被节流）
-    card.addEventListener('animationend', clearAnim, { once: true });
-    if (bumpTarget) bumpTarget.addEventListener('animationend', clearAnim, { once: true });
-    // 兜底：若动画未播放（窗口隐藏）也清理
-    setTimeout(clearAnim, 800);
+    const bumpTarget = document.getElementById('count') || document.getElementById('big');
+    playBump(card, bumpTarget, 'minus-anim', 'bump', 800);
     window.api.minusCheckin(ITEM_ID);
   });
 
