@@ -1,6 +1,6 @@
 {
   "name": "checkin-desktop",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "桌面常驻圆角半透明亚克力打卡组件",
   "main": "main.js",
   "scripts": {
