@@ -29,8 +29,6 @@ let configWin = null;
 let tray = null;
 const itemWins = new Map(); // itemId -> BrowserWindow
 let resizeJob = null;       // 正在拖拽缩放的卡片
-let fgMonitor = null;       // 前台窗口监控子进程
-let fgFullscreen = false;   // 前台应用是否全屏
 let trayHidden = false;     // 托盘手动隐藏
 let isQuitting = false;     // 仅托盘“退出”或系统退出时真正结束进程
 const autoHiddenIds = new Set(); // 完成目标后自动隐藏的卡片（当天）
@@ -207,6 +205,45 @@ function applyShape(win) {
   win.setShape(roundedShape(b.width, b.height, CARD_RADIUS));
 }
 
+// 把卡片窗口挂载到桌面层（WorkerW / 壁纸宿主层）
+// 效果：窗口"住进"桌面，任何普通应用打开时自然覆盖它（遮罩），
+// 无需再检测全屏 —— 与 Wallpaper Engine / Rainmeter 同层
+const ATTACH_SCRIPT = path.join(__dirname, 'attach-to-desktop.ps1');
+function attachToDesktop(win) {
+  if (!win || win.isDestroyed()) return;
+  try {
+    const hwnd = win.getNativeWindowHandle();
+    if (!hwnd || hwnd.length === 0) return;
+    // getNativeWindowHandle 返回小端序的 HWND（8 字节），取低 4 字节解析
+    const value = hwnd.readUInt32LE(0);
+    const [x, y] = win.getPosition();
+    const child = spawn('powershell.exe', [
+      '-NoProfile', '-ExecutionPolicy', 'Bypass',
+      '-File', ATTACH_SCRIPT, String(value), String(x), String(y)
+    ], { windowsHide: true });
+    child.on('error', () => {
+      if (!win.isDestroyed()) applyVisibility();
+    });
+    child.stdout.on('data', (d) => {
+      const out = d.toString().trim();
+      if (out && out.startsWith('OK')) {
+        // 挂载成功 → 按可见性规则显示
+        setTimeout(() => { if (!win.isDestroyed()) applyVisibility(); }, 50);
+      } else if (out) {
+        console.error('[attach] ' + out);
+        if (!win.isDestroyed()) applyVisibility();
+      }
+    });
+    child.on('exit', () => {
+      // 兜底：无论挂载结果如何，都让窗口按规则显示
+      setTimeout(() => { if (!win.isDestroyed()) applyVisibility(); }, 100);
+    });
+  } catch (e) {
+    console.error('挂载桌面层失败', e.message);
+    if (!win.isDestroyed()) applyVisibility();
+  }
+}
+
 // 新卡片默认位置：屏幕右下角向上堆叠
 function nextCardPos(data, size) {
   const wa = screen.getPrimaryDisplay().workArea;
@@ -232,11 +269,12 @@ function createCardWindow(item) {
     x, y,
     transparent: true,
     frame: false,
-    alwaysOnTop: true,
+    // 不再 alwaysOnTop：窗口挂载到桌面层（WorkerW），由系统层级自然决定遮盖
     skipTaskbar: true,
     resizable: false,
     focusable: false,
     hasShadow: false,
+    show: false,  // 挂载到桌面层后再显示，避免闪烁
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -248,9 +286,12 @@ function createCardWindow(item) {
 
   attachRendererCrashGuard(win);
 
+  // 挂载到桌面层（WorkerW）：attach 完成（OK）后按可见性规则显示
+  win.webContents.once('did-finish-load', () => {
+    attachToDesktop(win);
+  });
   const apply = () => applyShape(win);
   win.once('ready-to-show', apply);
-  win.webContents.once('did-finish-load', apply);
   win.on('resized', apply);
 
   // 用户拖动窗口 → 保存位置（防抖）
@@ -377,18 +418,13 @@ function createTrayIcon() {
 
 /* ---------------- 可见性管理 ---------------- */
 
-// 配置窗口打开时，说明用户正在主动使用 → 强制显示卡片（全屏隐藏让位）
-function isConfigActive() {
-  return configWin && !configWin.isDestroyed() && configWin.isVisible();
-}
-
-// 根据全屏状态、托盘手动隐藏、目标完成自动隐藏，统一控制卡片显示
+// 根据托盘手动隐藏、目标完成自动隐藏，统一控制卡片显示
+// （全屏遮盖由桌面层窗口层级天然实现，无需检测）
 function applyVisibility() {
-  const configActive = isConfigActive();
   for (const [id, win] of itemWins) {
     if (win.isDestroyed()) continue;
     const autoHide = autoHiddenIds.has(id);
-    const show = (!fgFullscreen || configActive) && !trayHidden && !autoHide;
+    const show = !trayHidden && !autoHide;
     if (show && !win.isVisible()) win.show();
     else if (!show && win.isVisible()) win.hide();
   }
@@ -469,107 +505,6 @@ function startAutoHideScheduler() {
 function initAutoHide() {
   evaluateAutoHide();
   startAutoHideScheduler();
-}
-
-/* ---------------- 前台窗口监控（全屏时自动隐藏） ---------------- */
-
-// 这些窗口即使覆盖整个屏幕也不算“全屏应用”：
-// 桌面图标宿主、壁纸宿主（含 Wallpaper Engine）、任务栏、开始菜单、Rainmeter 皮肤、Dock 等常驻工具
-const FG_SKIP_CLASSES = new Set([
-  'Progman',                       // 桌面图标
-  'WorkerW',                       // 壁纸宿主（Wallpaper Engine 也用它）
-  'Shell_TrayWnd',                 // 任务栏
-  'Shell_SecondaryTrayWnd',        // 副屏任务栏
-  'DV2ControlHost',                // 开始菜单 / 搜索
-  'Windows.UI.Core.CoreWindow',    // UWP 系统 UI
-  'MultitaskingViewFrame',         // 任务视图 / Alt-Tab
-  'XamlExplorerHostIslandWindow',  // 资源管理器 XAML 宿主
-  'XamlExplorerHostIslandWindow_WASDK', // WinUI 3 宿主
-  'RainmeterMeterWindow',          // Rainmeter 皮肤窗口
-  'RainmeterSkinWindow',           // Rainmeter 皮肤窗口
-  'MyDockFinderDockWindow',        // My Dock Finder
-  'MyDockAPP',                     // My Dock Finder 窗口（实测类名）
-  'MyFinderApp',                   // My Dock Finder 窗口（实测类名）
-  'MyFinderAppDesktopBg',          // My Dock Finder 桌面背景
-  'MyDockFinderCaptureHwnd',       // My Dock Finder 隐藏捕获窗口
-  'EdgeUiInputTopWndClass',        // Edge 顶部输入条
-  'EdgeUiInputWndClass',           // Edge 输入窗口
-  'ApplicationFrameWindow',        // UWP 应用框架宿主
-  'SecHealth Window Class',        // Windows 安全中心托盘窗口
-  'ATL:0000000000000000'           // Defender 托盘隐藏窗口（ATL 类，按进程兜底）
-]);
-const FG_SKIP_PROCESSES = new Set([
-  'rainmeter',         // Rainmeter
-  'mydockfinder',      // My Dock Finder
-  'mydock',            // My Dock Finder
-  'dock_64',           // My Dock Finder
-  'dockmod',           // My Dock Finder
-  'dockmod64',         // My Dock Finder
-  'wallpaper32',       // Wallpaper Engine
-  'wallpaper64',       // Wallpaper Engine
-  'wallpaperservice64',// Wallpaper Engine 服务
-  'explorer',          // 资源管理器（桌面/任务栏由它承载）
-  'mpdefendercoreservice', // Windows Defender 核心服务
-  'msmpeng',           // Windows Defender 反恶意软件服务
-  'securityhealthservice', // Windows 安全中心服务
-  'securityhealthsystray', // Windows 安全中心托盘
-  'msseces',           // 旧版 Windows Defender / Security Essentials
-  'powershell',        // PowerShell 终端（全屏终端不应隐藏卡片）
-  'windowsterminal',   // Windows Terminal
-  'cmd'                // 命令提示符
-]);
-
-function startForegroundMonitor() {
-  try {
-    fgMonitor = spawn('powershell.exe', [
-      '-NoProfile', '-ExecutionPolicy', 'Bypass',
-      '-File', path.join(__dirname, 'foreground-monitor.ps1')
-    ], { windowsHide: true });
-
-    let buf = '';
-    fgMonitor.stdout.on('data', (chunk) => {
-      buf += chunk.toString();
-      let idx;
-      while ((idx = buf.indexOf('\n')) >= 0) {
-        const line = buf.slice(0, idx).trim();
-        buf = buf.slice(idx + 1);
-        if (!line) continue;
-        handleForegroundLine(line);
-      }
-    });
-    fgMonitor.on('error', (err) => {
-      console.error('前台监控启动失败', err.message);
-      fgMonitor = null;
-    });
-    fgMonitor.on('exit', () => { fgMonitor = null; });
-  } catch (e) {
-    console.error('前台监控失败（不影响使用）', e);
-  }
-}
-
-function handleForegroundLine(line) {
-  // 格式：N|class;proc|class;proc|...（N 为覆盖全屏的窗口数，0 表示没有）
-  const segs = line.split('|');
-  const n = parseInt(segs[0], 10);
-  if (isNaN(n) || n < 0) return;
-  let fullscreen = false;
-  if (n > 0) {
-    // 只要存在任意一个覆盖全屏且不属于常驻工具的窗口 → 视为全屏
-    for (let i = 1; i <= n && i < segs.length; i++) {
-      const [clsPart, procPart] = (segs[i] || '').split(';');
-      const cls = (clsPart || '').trim();
-      const proc = (procPart || '').trim().toLowerCase();
-      const isTool = FG_SKIP_CLASSES.has(cls) || FG_SKIP_PROCESSES.has(proc);
-      if (!isTool) {
-        fullscreen = true;
-        break;
-      }
-    }
-  }
-  if (fullscreen !== fgFullscreen) {
-    fgFullscreen = fullscreen;
-    applyVisibility();
-  }
 }
 
 /* ---------------- 托盘 ---------------- */
@@ -837,23 +772,18 @@ ipcMain.handle('config:open', () => createConfigWindow());
 app.whenReady().then(() => {
   syncWidgetWindows(loadData());
   createTray();
-  startForegroundMonitor();
   initAutoHide();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) syncWidgetWindows(loadData());
   });
 });
 
-// 退出时清理前台监控子进程和定时器
+// 退出时清理定时器
 app.on('before-quit', () => {
   isQuitting = true;
 });
 
 app.on('will-quit', () => {
-  if (fgMonitor) {
-    try { fgMonitor.kill(); } catch (e) { /* 忽略 */ }
-    fgMonitor = null;
-  }
   if (autoHideTimer) {
     clearInterval(autoHideTimer);
     autoHideTimer = null;
